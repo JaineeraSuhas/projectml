@@ -249,6 +249,10 @@ select:focus, input:focus {
   outline: none;
   border-color: var(--fg);
 }
+option {
+  background: var(--bg);
+  color: var(--fg);
+}
 
 /* ── TABLES ──────────────────────────────────────────────── */
 .table-wrap {
