@@ -160,8 +160,7 @@ h1, h2, h3, h4, .font-disp {
   justify-content: center;
   width: 48px;
   height: 48px;
-  border-radius: 50%;
-  border: 1px solid var(--fg);
+  border: none;
   background: transparent;
   color: var(--fg);
   cursor: pointer;
@@ -170,8 +169,8 @@ h1, h2, h3, h4, .font-disp {
   line-height: 0;
 }
 .theme-toggle-btn:hover {
-  background: var(--fg);
-  color: var(--bg);
+  transform: scale(1.1);
+  background: transparent;
 }
 
 .theme-toggle-icon {
