@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>IDCFSS — Intelligent Data Cleaning</title>
+<link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+<script src="/static/app-loader.js"></script>
+
+<header class="app-bar" id="app-bar">
+  <a class="app-bar-logo" href="#" onclick="startOver();return false;">I.D.C.F.S.S.</a>
+  <div class="app-bar-actions">
+    <div class="app-bar-chip" id="session-chip" style="display:none">
+      <span>SESSION: <span id="session-id-text"></span></span>
+    </div>
+    <div class="app-bar-chip">VTU BANGALORE</div>
+  </div>
+</header>
+
+<nav class="step-rail" id="step-rail">
+  <div class="step-item active" data-step="0" onclick="goStep(0)">01 Upload</div>
+  <div class="step-item disabled" data-step="1" onclick="goStep(1)">02 Profile</div>
+  <div class="step-item disabled" data-step="2" onclick="goStep(2)">03 Clean</div>
+  <div class="step-item disabled" data-step="3" onclick="goStep(3)">04 Features</div>
+  <div class="step-item disabled" data-step="4" onclick="goStep(4)">05 Export</div>
+</nav>
+
+<main class="main-content" id="main-content"></main>
+
+<div class="snackbar-container" id="snackbar-container"></div>
+<div class="loading-overlay" id="loading">
+  <div class="loading-title" id="loading-headline">Processing</div>
+  <div class="loading-desc" id="loading-body">Please wait</div>
+</div>
+
+<script src="/static/app-samples.js"></script>
+<script src="/static/app-core.js"></script>
+<script src="/static/app-steps-01.js"></script>
+<script src="/static/app-steps-2.js"></script>
+<script src="/static/app-steps-34.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    // Initialize LetterSwap PingPong for Navigation
+    document.querySelectorAll('.step-item').forEach(el => {
+      const text = el.textContent;
+      el.textContent = '';
+      text.split('').forEach((char, i) => {
+        const wrap = document.createElement('span');
+        wrap.className = 'ls-char';
+        if (char === ' ') {
+          wrap.innerHTML = '&nbsp;';
+          wrap.style.width = '4px';
+        } else {
+          wrap.innerHTML = `<span class="ls-primary" style="transition-delay: ${i * 20}ms">${char}</span><span class="ls-secondary" style="transition-delay: ${i * 20}ms">${char}</span>`;
+        }
+        el.appendChild(wrap);
+      });
+    });
+
+    renderNav();
+    render();
+  });
+</script>
+</body>
+</html>
