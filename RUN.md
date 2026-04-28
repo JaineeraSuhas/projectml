@@ -18,6 +18,7 @@ This project is a high-performance web application featuring a stunning Vincent 
 2. **Start the Development Server**
    Run the FastAPI backend using `uvicorn`. This serves both the API endpoints and the frontend static files.
    ```bash
+   cd backend
    python -m uvicorn main:app --reload --port 8000
    ```
 
