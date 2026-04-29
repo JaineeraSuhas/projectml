@@ -5,7 +5,16 @@ Generates comprehensive dataset quality statistics and profile.
 import pandas as pd
 import numpy as np
 import json
+import math
 
+def safe_float(val, default=0.0):
+    try:
+        v = float(val)
+        if math.isnan(v) or math.isinf(v):
+            return default
+        return v
+    except (ValueError, TypeError):
+        return default
 
 class DataProfiler:
     def __init__(self, df: pd.DataFrame):
@@ -51,13 +60,13 @@ class DataProfiler:
         if self._infer_type(series) == "numeric":
             desc = series.dropna().describe()
             result["stats"] = {
-                "mean": round(float(desc.get("mean", 0)), 4),
-                "std": round(float(desc.get("std", 0)), 4),
-                "min": round(float(desc.get("min", 0)), 4),
-                "q25": round(float(desc.get("25%", 0)), 4),
-                "median": round(float(desc.get("50%", 0)), 4),
-                "q75": round(float(desc.get("75%", 0)), 4),
-                "max": round(float(desc.get("max", 0)), 4),
+                "mean": round(safe_float(desc.get("mean", 0)), 4),
+                "std": round(safe_float(desc.get("std", 0)), 4),
+                "min": round(safe_float(desc.get("min", 0)), 4),
+                "q25": round(safe_float(desc.get("25%", 0)), 4),
+                "median": round(safe_float(desc.get("50%", 0)), 4),
+                "q75": round(safe_float(desc.get("75%", 0)), 4),
+                "max": round(safe_float(desc.get("max", 0)), 4),
             }
             q1 = series.quantile(0.25)
             q3 = series.quantile(0.75)

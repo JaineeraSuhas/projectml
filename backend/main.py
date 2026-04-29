@@ -58,7 +58,10 @@ def df_to_safe_dict(df: pd.DataFrame) -> list:
 
 def load_dataframe(content: bytes, filename: str) -> pd.DataFrame:
     if filename.endswith(".csv"):
-        df = pd.read_csv(io.BytesIO(content))
+        try:
+            df = pd.read_csv(io.BytesIO(content))
+        except UnicodeDecodeError:
+            df = pd.read_csv(io.BytesIO(content), encoding='latin1')
     elif filename.endswith((".xlsx", ".xls")):
         df = pd.read_excel(io.BytesIO(content))
     else:
