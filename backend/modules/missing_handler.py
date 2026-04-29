@@ -71,6 +71,16 @@ class MissingValueHandler:
         min_valid = int(df.shape[1] * (1 - threshold))
         return df.dropna(thresh=min_valid)
 
+    def drop_column(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
+        df = df.copy()
+        if col in df.columns:
+            return df.drop(columns=[col])
+        return df
+
+    def drop_rows_for_col(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
+        df = df.copy()
+        return df.dropna(subset=[col])
+
     def apply_strategy(self, df: pd.DataFrame, col: str, strategy: str, constant_value=None, k: int = 5) -> pd.DataFrame:
         strategy = strategy.lower()
         if strategy == "mean":
@@ -89,8 +99,10 @@ class MissingValueHandler:
             return self.fill_backward(df, col)
         elif strategy == "constant" and constant_value is not None:
             return self.impute_constant(df, col, constant_value)
-        elif strategy == "drop":
-            return self.drop_rows(df)
+        elif strategy in ["drop", "drop_row"]:
+            return self.drop_rows_for_col(df, col)
+        elif strategy == "drop_column":
+            return self.drop_column(df, col)
         else:
             if pd.api.types.is_numeric_dtype(df[col]):
                 return self.impute_median(df, col)
