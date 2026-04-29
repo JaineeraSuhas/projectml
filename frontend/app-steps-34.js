@@ -140,20 +140,6 @@ function tplExport() {
   const xlsxUrl = S.apiBase + '/download/' + S.sessionId + '?format=xlsx';
   const pyUrl = S.apiBase + '/pipeline/' + S.sessionId + '?format=python';
 
-  const profOrig = S.profile || { shape: { rows: 0, cols: 0 } };
-  const profClean = S.cleanedProfile || profOrig;
-  
-  const pctRows = profOrig.shape.rows > 0 ? (profClean.shape.rows / profOrig.shape.rows * 100).toFixed(1) : 100;
-  const pctCols = profOrig.shape.cols > 0 ? (profClean.shape.cols / profOrig.shape.cols * 100).toFixed(1) : 100;
-  
-  const logHtml = S.cleaningLog && S.cleaningLog.length > 0 ? S.cleaningLog.map(l => `
-    <div style="display:flex; justify-content:space-between; padding: 12px 0; border-bottom: 1px solid rgba(13,13,13,0.1);">
-      <span style="font-family: var(--font-mono); font-size: 12px; color: var(--fg-muted); width: 120px;">${l.step.toUpperCase()}</span>
-      <span style="font-size: 13px; font-weight: 500; flex: 1;">${l.column} <span style="color:var(--fg-muted); margin: 0 8px;">→</span> ${l.strategy}</span>
-      <span style="font-family: var(--font-mono); font-size: 12px; color: var(--fg-muted); text-align: right;">${l.detail}</span>
-    </div>
-  `).join('') : '<div style="color:var(--fg-muted); font-size:13px; padding:12px 0;">NO CLEANING APPLIED</div>';
-
   return `
     <div style="text-align:center; padding: 80px 0 40px;">
       <div class="label-small" style="margin-bottom: 16px;">PIPELINE COMPLETE</div>
@@ -161,42 +147,6 @@ function tplExport() {
     </div>
 
     <hr class="rule" style="margin-bottom:64px;">
-    
-    <div class="aesthetic-card" style="margin-bottom: 48px; background: rgba(13,13,13,0.02);">
-      <div class="aesthetic-card-header">
-        <div class="aesthetic-card-title">TRANSFORMATION SUMMARY</div>
-        <div class="aesthetic-card-subtitle">COMPARISON VS INSERTED DATASET</div>
-      </div>
-      
-      <div class="grid-2" style="margin-bottom: 32px; gap: 16px;">
-        <div style="padding: 24px; border: 1px solid rgba(13,13,13,0.1); background: #fff;">
-          <div class="label-small">ROWS RETAINED</div>
-          <div style="font-size: 40px; font-weight: 600; font-family: var(--font-disp); margin-top: 12px;">
-            ${profClean.shape.rows} <span style="font-size: 18px; color: var(--fg-muted); font-weight: 400;">/ ${profOrig.shape.rows}</span>
-          </div>
-          <div style="font-family: var(--font-mono); font-size: 12px; margin-top: 8px; color: ${pctRows < 100 ? 'var(--fg)' : 'var(--fg-muted)'};">
-            ${pctRows}% OF ORIGINAL OUTCOME
-          </div>
-        </div>
-        
-        <div style="padding: 24px; border: 1px solid rgba(13,13,13,0.1); background: #fff;">
-          <div class="label-small">COLUMNS</div>
-          <div style="font-size: 40px; font-weight: 600; font-family: var(--font-disp); margin-top: 12px;">
-            ${profClean.shape.cols} <span style="font-size: 18px; color: var(--fg-muted); font-weight: 400;">/ ${profOrig.shape.cols}</span>
-          </div>
-          <div style="font-family: var(--font-mono); font-size: 12px; margin-top: 8px; color: ${pctCols != 100 ? 'var(--fg)' : 'var(--fg-muted)'};">
-            ${pctCols}% OF ORIGINAL OUTCOME
-          </div>
-        </div>
-      </div>
-
-      <div class="aesthetic-card-header" style="margin-top: 0; padding-top: 16px; border-top: 1px solid rgba(13,13,13,0.1);">
-        <div class="aesthetic-card-title" style="font-size: 12px;">MODIFICATION LOG</div>
-      </div>
-      <div style="max-height: 240px; overflow-y: auto; padding-right: 8px; margin-top: 16px;">
-        ${logHtml}
-      </div>
-    </div>
     
     <div class="grid-2">
       <div class="aesthetic-card">
