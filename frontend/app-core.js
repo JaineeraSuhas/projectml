@@ -1,8 +1,25 @@
 /* IDCFSS Core State & Utilities */
 const S={step:0,maxStep:0,sessionId:null,filename:null,profile:null,columns:[],preview:[],cleanedProfile:null,cleanedColumns:[],cleanedPreview:[],featureImportance:{},selectedFeatures:[],cleaningLog:[],missingConfig:{},outlierConfig:{},encodingConfig:{},scalingConfig:{method:'standard',columns:[]},dropDuplicates:true,targetColumn:null,featureMethod:'random_forest',nFeatures:10,
-  // Auto-detect API base: empty string when served from FastAPI, fallback for local dev
-  apiBase: window.location.port === '8000' || window.location.port === '80' || window.location.port === '443' || window.location.port === '' ? '' : 'http://localhost:8000'
+  // Auto-detect API base for production deployment
+  apiBase: getApiBase()
 };
+
+function getApiBase() {
+  // If served from same origin (production), use empty string
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  
+  // Check if we're on localhost:8000 or similar development server
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    if (port && port !== '80' && port !== '443') {
+      return `${protocol}//${hostname}:${port}`;
+    }
+  }
+  
+  // For production, use current origin
+  return window.location.origin;
+}
 window.addEventListener('scroll',()=>{document.getElementById('app-bar').classList.toggle('scrolled',window.scrollY>4)});
 function snack(msg,type='success'){const icons={success:'✓',error:'✕',info:'ℹ'};const c=document.getElementById('snackbar-container');const el=document.createElement('div');el.className=`snackbar ${type}`;el.innerHTML=`<span class="snack-icon" style="font-size:16px;font-weight:700">${icons[type]}</span><span style="flex:1">${msg}</span>`;c.appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300)},4000)}
 let loadingInterval = null;
