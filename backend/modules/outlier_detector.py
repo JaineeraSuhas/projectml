@@ -10,7 +10,7 @@ from typing import List
 
 class OutlierDetector:
     def detect_iqr(self, df: pd.DataFrame, col: str, factor: float = 1.5) -> List[int]:
-        if not pd.api.types.is_numeric_dtype(df[col]):
+        if not pd.api.types.is_numeric_dtype(df[col]) or pd.api.types.is_bool_dtype(df[col]):
             return []
         q1 = df[col].quantile(0.25)
         q3 = df[col].quantile(0.75)
@@ -19,7 +19,7 @@ class OutlierDetector:
         return df.index[mask & df[col].notna()].tolist()
 
     def detect_zscore(self, df: pd.DataFrame, col: str, threshold: float = 3.0) -> List[int]:
-        if not pd.api.types.is_numeric_dtype(df[col]):
+        if not pd.api.types.is_numeric_dtype(df[col]) or pd.api.types.is_bool_dtype(df[col]):
             return []
         mean = df[col].mean()
         std = df[col].std()
@@ -30,7 +30,7 @@ class OutlierDetector:
         return df.index[mask & df[col].notna()].tolist()
 
     def detect_isolation_forest(self, df: pd.DataFrame, cols: List[str], contamination: float = 0.05) -> List[int]:
-        num_cols = [c for c in cols if pd.api.types.is_numeric_dtype(df[c])]
+        num_cols = [c for c in cols if pd.api.types.is_numeric_dtype(df[c]) and not pd.api.types.is_bool_dtype(df[c])]
         if not num_cols:
             return []
         sub = df[num_cols].dropna()
@@ -42,7 +42,7 @@ class OutlierDetector:
 
     def cap_outliers(self, df: pd.DataFrame, col: str, method: str = "iqr") -> pd.DataFrame:
         df = df.copy()
-        if not pd.api.types.is_numeric_dtype(df[col]):
+        if not pd.api.types.is_numeric_dtype(df[col]) or pd.api.types.is_bool_dtype(df[col]):
             return df
         if method == "iqr":
             q1 = df[col].quantile(0.25)

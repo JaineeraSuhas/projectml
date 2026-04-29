@@ -57,8 +57,11 @@ class DataProfiler:
             "unique_pct": round(100 * series.nunique() / len(series), 2) if len(series) > 0 else 0,
         }
 
-        if self._infer_type(series) == "numeric":
-            desc = series.dropna().describe()
+        inferred = self._infer_type(series)
+        if inferred == "numeric":
+            # Ensure we are working with float for statistical operations to avoid numpy boolean issues
+            num_series = series.dropna().astype(float)
+            desc = num_series.describe()
             result["stats"] = {
                 "mean": round(safe_float(desc.get("mean", 0)), 4),
                 "std": round(safe_float(desc.get("std", 0)), 4),
@@ -68,10 +71,10 @@ class DataProfiler:
                 "q75": round(safe_float(desc.get("75%", 0)), 4),
                 "max": round(safe_float(desc.get("max", 0)), 4),
             }
-            q1 = series.quantile(0.25)
-            q3 = series.quantile(0.75)
+            q1 = num_series.quantile(0.25)
+            q3 = num_series.quantile(0.75)
             iqr = q3 - q1
-            outliers = series[(series < q1 - 1.5 * iqr) | (series > q3 + 1.5 * iqr)]
+            outliers = num_series[(num_series < q1 - 1.5 * iqr) | (num_series > q3 + 1.5 * iqr)]
             result["outlier_count"] = int(outliers.count())
         else:
             top5 = series.value_counts().head(5)
@@ -80,6 +83,8 @@ class DataProfiler:
         return result
 
     def _infer_type(self, series: pd.Series) -> str:
+        if pd.api.types.is_bool_dtype(series):
+            return "categorical"  # Treat booleans as categorical to avoid confusion in stats
         if pd.api.types.is_numeric_dtype(series):
             return "numeric"
         if pd.api.types.is_datetime64_any_dtype(series):

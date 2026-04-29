@@ -45,123 +45,219 @@ def generate_html_report(
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IDCFSS - Data Quality Report</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&display=swap');
+  
   :root {{
-    --navy: #1A3C5E; --teal: #0D7377; --emerald: #14BDAC;
-    --bg: #F0F7FA; --white: #ffffff; --text: #1a2332;
-    --muted: #6b7a8d; --border: #dce8f0;
+    --bg: #ffffff;
+    --fg: #0d0d0d;
+    --fg-muted: rgba(13,13,13,0.45);
+    --rule: 1px solid rgba(13,13,13,0.15);
+    --font-disp: 'Playfair Display', 'Times New Roman', Georgia, serif;
+    --font-sans: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
   }}
+
+  @media (prefers-color-scheme: dark) {{
+    :root {{
+      --bg: #030303;
+      --fg: #ffffff;
+      --fg-muted: rgba(255,255,255,0.45);
+      --rule: 1px solid rgba(255,255,255,0.15);
+    }}
+  }}
+
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{ font-family: 'DM Mono', monospace; background: var(--bg); color: var(--text); padding: 2rem; }}
-  h1 {{ font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--navy); }}
-  h2 {{ font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--navy); margin: 2rem 0 1rem; }}
-  .header {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; border-bottom: 3px solid var(--emerald); padding-bottom: 1rem; }}
-  .subtitle {{ color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; }}
-  .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }}
-  .card {{ background: var(--white); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--border); }}
-  .card-label {{ font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }}
-  .card-value {{ font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; color: var(--navy); }}
-  .card-sub {{ font-size: 0.75rem; color: var(--emerald); }}
-  .score-bar {{ background: #e2f0ed; border-radius: 99px; height: 8px; margin-top: 0.5rem; }}
-  .score-fill {{ background: linear-gradient(90deg, var(--teal), var(--emerald)); border-radius: 99px; height: 8px; transition: width 1s; }}
-  table {{ width: 100%; border-collapse: collapse; background: var(--white); border-radius: 12px; overflow: hidden; margin-bottom: 1.5rem; border: 1px solid var(--border); }}
-  th {{ background: var(--navy); color: white; padding: 0.75rem 1rem; text-align: left; font-family: 'Syne', sans-serif; font-size: 0.8rem; }}
-  td {{ padding: 0.65rem 1rem; font-size: 0.82rem; border-bottom: 1px solid var(--border); }}
-  tr:last-child td {{ border-bottom: none; }}
-  tr:hover td {{ background: #f0f7fa; }}
-  .badge {{ padding: 2px 8px; border-radius: 99px; font-size: 0.7rem; font-weight: 500; }}
-  .badge-numeric {{ background: #dbeafe; color: #1d4ed8; }}
-  .badge-categorical {{ background: #fce7f3; color: #be185d; }}
-  .badge-datetime {{ background: #d1fae5; color: #065f46; }}
-  .before-after {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }}
-  .ba-card {{ background: var(--white); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border); }}
-  .ba-card.before {{ border-top: 4px solid #ef4444; }}
-  .ba-card.after {{ border-top: 4px solid var(--emerald); }}
-  .ba-title {{ font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }}
-  .ba-stat {{ display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.83rem; }}
-  .ba-stat:last-child {{ border-bottom: none; }}
-  .fi-bar {{ display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }}
-  .fi-label {{ width: 180px; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-  .fi-track {{ flex: 1; background: #e2f0ed; border-radius: 99px; height: 10px; }}
-  .fi-fill {{ background: linear-gradient(90deg, var(--teal), var(--emerald)); border-radius: 99px; height: 10px; }}
-  .fi-val {{ font-size: 0.75rem; color: var(--muted); width: 50px; text-align: right; }}
-  footer {{ margin-top: 3rem; text-align: center; color: var(--muted); font-size: 0.75rem; border-top: 1px solid var(--border); padding-top: 1rem; }}
+  body {{ 
+    background: var(--bg); 
+    color: var(--fg); 
+    font-family: var(--font-sans); 
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 64px 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.6s, color 0.6s;
+  }}
+
+  h1, h2, .font-disp {{
+    font-family: var(--font-disp);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }}
+
+  .label-small {{
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }}
+
+  .header {{
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 64px;
+  }}
+
+  .rule-line {{
+    border: none;
+    border-top: var(--rule);
+    margin: 48px 0;
+  }}
+
+  .grid-3 {{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 32px;
+    margin-bottom: 64px;
+  }}
+
+  .stat-block {{
+    border-right: var(--rule);
+    padding-right: 32px;
+  }}
+  .stat-block:last-child {{ border-right: none; }}
+
+  .aesthetic-card {{
+    border: var(--rule);
+    padding: 32px;
+    margin-bottom: 32px;
+  }}
+  .aesthetic-card-header {{
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: var(--rule);
+  }}
+  .aesthetic-card-title {{
+    font-size: 24px;
+  }}
+
+  .table-wrap {{
+    width: 100%;
+    overflow-x: auto;
+  }}
+  table {{
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+  }}
+  th {{
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    padding: 16px 12px;
+    border-bottom: var(--rule);
+    font-weight: normal;
+  }}
+  td {{
+    padding: 16px 12px;
+    border-bottom: var(--rule);
+    font-size: 13px;
+  }}
+
+  .badge {{
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--fg-muted);
+    padding: 2px 8px;
+    border-radius: 99px;
+  }}
+
+  .fi-bar {{ display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }}
+  .fi-label {{ width: 200px; font-weight: 500; font-family: var(--font-sans); font-size: 13px; }}
+  .fi-track {{ flex: 1; height: 4px; background: rgba(13,13,13,0.1); position: relative; }}
+  @media (prefers-color-scheme: dark) {{
+    .fi-track {{ background: rgba(255,255,255,0.1); }}
+  }}
+  .fi-fill {{ background: var(--fg); height: 100%; position: absolute; left: 0; top: 0; }}
+  .fi-val {{ font-family: var(--font-sans); font-size: 12px; width: 60px; text-align: right; }}
+
+  footer {{
+    margin-top: 64px;
+    text-align: center;
+    color: var(--fg-muted);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }}
 </style>
 </head>
 <body>
-<div class="header">
-  <div>
-    <h1>IDCFSS Data Quality Report</h1>
-    <div class="subtitle">Intelligent Data Cleaning & Feature Selection System</div>
+  <div class="header">
+    <div>
+      <h1 style="font-size: 48px; line-height: 1;">QUALITY REPORT</h1>
+      <div class="label-small" style="margin-top: 12px;">I.D.C.F.S.S — AUTOMATED PROFILING & PIPELINE SUMMARY</div>
+    </div>
+    <div class="label-small">V 1.0</div>
   </div>
-  <div style="text-align:right; font-size:0.78rem; color:var(--muted);">Generated by IDCFSS v1.0</div>
-</div>
 
-<div class="cards">
-  <div class="card">
-    <div class="card-label">Quality Score (Before)</div>
-    <div class="card-value">{before_score}</div>
-    <div class="score-bar"><div class="score-fill" style="width:{before_score}%"></div></div>
-  </div>
-  <div class="card">
-    <div class="card-label">Quality Score (After)</div>
-    <div class="card-value" style="color:var(--emerald)">{after_score}</div>
-    <div class="score-bar"><div class="score-fill" style="width:{after_score}%"></div></div>
-    <div class="card-sub">+{round(after_score - before_score, 1)} improvement</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Rows</div>
-    <div class="card-value">{after_rows:,}</div>
-    <div class="card-sub">of {before_rows:,} original</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Columns</div>
-    <div class="card-value">{after_cols}</div>
-    <div class="card-sub">of {before_cols} original</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Missing Cells</div>
-    <div class="card-value">{cleaned_profile['missing_cells']}</div>
-    <div class="card-sub">of {original_profile['missing_cells']} original</div>
-  </div>
-</div>
+  <hr class="rule-line">
 
-<h2>Before vs After</h2>
-<div class="before-after">
-  <div class="ba-card before">
-    <div class="ba-title">Before Cleaning</div>
-    <div class="ba-stat"><span>Rows</span><strong>{before_rows:,}</strong></div>
-    <div class="ba-stat"><span>Columns</span><strong>{before_cols}</strong></div>
-    <div class="ba-stat"><span>Missing Cells</span><strong>{original_profile['missing_cells']}</strong></div>
-    <div class="ba-stat"><span>Missing %</span><strong>{original_profile['missing_pct']}%</strong></div>
-    <div class="ba-stat"><span>Duplicates</span><strong>{original_profile['duplicate_rows']}</strong></div>
-    <div class="ba-stat"><span>Quality Score</span><strong>{before_score}/100</strong></div>
+  <div class="grid-3">
+    <div class="stat-block">
+      <div class="label-small">QUALITY SCORE (AFTER)</div>
+      <div class="font-disp" style="font-size: 48px;">{after_score}</div>
+      <div class="label-small" style="text-transform:none;">Was {before_score} (+{round(after_score - before_score, 1)})</div>
+    </div>
+    <div class="stat-block">
+      <div class="label-small">ROWS</div>
+      <div class="font-disp" style="font-size: 48px;">{after_rows:,}</div>
+      <div class="label-small" style="text-transform:none;">Original: {before_rows:,}</div>
+    </div>
+    <div class="stat-block">
+      <div class="label-small">COLUMNS</div>
+      <div class="font-disp" style="font-size: 48px;">{after_cols}</div>
+      <div class="label-small" style="text-transform:none;">Original: {before_cols}</div>
+    </div>
+    <div class="stat-block" style="border-right: none;">
+      <div class="label-small">MISSING CELLS</div>
+      <div class="font-disp" style="font-size: 48px;">{cleaned_profile['missing_cells']}</div>
+      <div class="label-small" style="text-transform:none;">Original: {original_profile['missing_cells']}</div>
+    </div>
   </div>
-  <div class="ba-card after">
-    <div class="ba-title">After Cleaning</div>
-    <div class="ba-stat"><span>Rows</span><strong>{after_rows:,}</strong></div>
-    <div class="ba-stat"><span>Columns</span><strong>{after_cols}</strong></div>
-    <div class="ba-stat"><span>Missing Cells</span><strong>{cleaned_profile['missing_cells']}</strong></div>
-    <div class="ba-stat"><span>Missing %</span><strong>{cleaned_profile['missing_pct']}%</strong></div>
-    <div class="ba-stat"><span>Duplicates</span><strong>{cleaned_profile['duplicate_rows']}</strong></div>
-    <div class="ba-stat"><span>Quality Score</span><strong>{after_score}/100</strong></div>
+
+  <div class="aesthetic-card">
+    <div class="aesthetic-card-header">
+      <div class="aesthetic-card-title font-disp">CLEANING PIPELINE LOG</div>
+      <div class="label-small" style="margin-top: 8px;">RECORD OF TRANSFORMATIONS APPLIED</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>STEP</th><th>COLUMN</th><th>STRATEGY</th><th>DETAIL</th></tr>
+        </thead>
+        <tbody>
+          {log_rows if log_rows else '<tr><td colspan="4" style="text-align:center;color:var(--fg-muted)">No cleaning steps applied</td></tr>'}
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
 
-<h2>Cleaning Log</h2>
-<table>
-  <thead><tr><th>Step</th><th>Column</th><th>Strategy</th><th>Detail</th></tr></thead>
-  <tbody>{log_rows if log_rows else '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No cleaning steps applied</td></tr>'}</tbody>
-</table>
+  <div class="aesthetic-card">
+    <div class="aesthetic-card-header">
+      <div class="aesthetic-card-title font-disp">COLUMN PROFILES (FINAL)</div>
+      <div class="label-small" style="margin-top: 8px;">POST-PROCESSING STATISTICS</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>COLUMN</th><th>TYPE</th><th>MISSING</th><th>MISSING %</th><th>UNIQUE</th></tr>
+        </thead>
+        <tbody>
+          {col_rows}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-<h2>Column Summary (After Cleaning)</h2>
-<table>
-  <thead><tr><th>Column</th><th>Type</th><th>Missing</th><th>Missing %</th><th>Unique Values</th></tr></thead>
-  <tbody>{col_rows}</tbody>
-</table>
-
-{'<h2>Feature Importance</h2><div id="fi-chart"></div>' if feature_importance else ''}
-{'<h2>Selected Features</h2><p style="font-size:0.85rem;color:var(--muted)">' + ', '.join(selected_features) + '</p>' if selected_features else ''}
+  {'<div class="aesthetic-card"><div class="aesthetic-card-header"><div class="aesthetic-card-title font-disp">FEATURE IMPORTANCE</div><div class="label-small" style="margin-top: 8px;">PREDICTIVE POWER ANALYSIS</div></div><div id="fi-chart"></div></div>' if feature_importance else ''}
+  
+  {'<div class="aesthetic-card"><div class="aesthetic-card-header"><div class="aesthetic-card-title font-disp">SELECTED FEATURES</div><div class="label-small" style="margin-top: 8px;">SUBSET FOR MODELING</div></div><p style="font-family: var(--font-sans); font-size: 14px; font-weight: 500;">' + ', '.join(selected_features) + '</p></div>' if selected_features else ''}
 
 <script>
 const fi = {fi_json};
@@ -178,6 +274,9 @@ if (container && Object.keys(fi).length > 0) {{
   `).join('');
 }}
 </script>
-<footer>IDCFSS v1.0 &middot; Atria Institute of Technology, VTU Bangalore &middot; Jaineera</footer>
+
+  <footer>
+    IDCFSS V1.0 &middot; AUTOMATED PIPELINE &middot; DATA QUALITY ASSURED
+  </footer>
 </body>
 </html>"""
