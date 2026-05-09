@@ -103,6 +103,34 @@ def df_to_safe_dict(df: pd.DataFrame) -> list:
     return json.loads(df.head(50).to_json(orient="records", date_format="iso", default_handler=str))
 
 
+def restore_original_dtypes(df: pd.DataFrame, original_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Restore column dtypes in df to match original_df as closely as possible.
+    This is crucial after KNN/MICE imputation which converts ints to float64.
+    Only touches columns that exist in both dataframes.
+    """
+    df = df.copy()
+    for col in df.columns:
+        if col not in original_df.columns:
+            continue
+        orig_dtype = original_df[col].dtype
+        cur_dtype = df[col].dtype
+        if cur_dtype == orig_dtype:
+            continue
+        try:
+            # Restore integer columns: only if no NaNs remain (can't have NaN in int)
+            if pd.api.types.is_integer_dtype(orig_dtype) and pd.api.types.is_float_dtype(cur_dtype):
+                if df[col].isnull().sum() == 0:
+                    df[col] = df[col].round().astype(orig_dtype)
+                # else keep as float (NaN forces float)
+            # Restore object/string columns that were not meant to be numeric
+            elif pd.api.types.is_object_dtype(orig_dtype) and not pd.api.types.is_object_dtype(cur_dtype):
+                df[col] = df[col].astype(str)
+        except Exception:
+            pass  # Best-effort — keep as-is if conversion fails
+    return df
+
+
 def load_dataframe(content: bytes, filename: str) -> pd.DataFrame:
     if filename.endswith(".csv"):
         try:
@@ -284,8 +312,10 @@ async def clean_dataset(body: dict):
                     log.append({"step": "Duplicates", "column": "all", "strategy": "drop",
                                 "detail": f"Removed {removed} duplicates"})
 
-            # Save human-readable version for download (original text values preserved)
-            export_df = df.copy()
+            # Save human-readable version for download (original text values preserved).
+            # Restore original column dtypes so KNN/MICE float conversion doesn't leak
+            # into the CSV (e.g. int column 25 → 25.0 → back to 25).
+            export_df = restore_original_dtypes(df, session["df"])
 
             # ── STAGE 2: ML preprocessing (encoding + scaling) for feature selection ─
             ml_df = df.copy()
