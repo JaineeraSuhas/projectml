@@ -187,7 +187,10 @@ async def upload_dataset(file: UploadFile = File(...)):
             "df": df,
             "filename": filename,
             "profile": profile,
-            "cleaned_df": None,
+            # export_df: human-readable cleaned data (no encoding/scaling) — used for download
+            "export_df": None,
+            # ml_df: fully processed data (encoded + scaled) — used for feature selection
+            "ml_df": None,
             "cleaned_profile": None,
             "cleaning_log": [],
             "feature_importance": {},
@@ -216,7 +219,16 @@ async def upload_dataset(file: UploadFile = File(...)):
 
 @app.post("/clean")
 async def clean_dataset(body: dict):
-    """Apply cleaning operations to the uploaded dataset."""
+    """
+    Apply cleaning operations to the uploaded dataset.
+
+    Pipeline is split into two stages:
+      1. export_df  — missing values + outliers + duplicates only.
+                      Categorical columns are kept as original text.
+                      This is what gets downloaded by the user.
+      2. ml_df      — export_df further processed with encoding + scaling.
+                      Used internally for feature selection / ML tasks.
+    """
     try:
         session_id = body.get("session_id")
         if not session_id or session_id not in sessions:
@@ -229,8 +241,10 @@ async def clean_dataset(body: dict):
         df = session["df"].copy()
         config = body.get("config", {})
         log = []
-        
+
         try:
+            # ── STAGE 1: Human-readable cleaning (exported to CSV/XLSX) ──────────
+
             # --- Missing Value Handling ---
             missing_cfg = config.get("missing", {})
             handler = MissingValueHandler()
@@ -261,57 +275,79 @@ async def clean_dataset(body: dict):
                                  "strategy": f"{method} -> {action}",
                                  "detail": f"{diff} rows affected" if action == "remove" else "Values adjusted"})
 
-            # --- Categorical Encoding ---
-            encoding_cfg = config.get("encoding", {})
-            encoder = CategoricalEncoder()
-            for col, strategy in encoding_cfg.items():
-                if col in df.columns:
-                    target_col = config.get("target_column")
-                    df = encoder.apply_strategy(df, col, strategy, target_col=target_col)
-                    orig_unique = sessions[session_id]['df'][col].nunique() if col in sessions[session_id]['df'].columns else '?'
-                    log.append({"step": "Encoding", "column": col, "strategy": strategy,
-                                 "detail": f"Unique: {orig_unique}"})
-
-            # --- Feature Scaling ---
-            scaling_cfg = config.get("scaling", {})
-            if scaling_cfg:
-                method = scaling_cfg.get("method", "standard")
-                cols_to_scale = scaling_cfg.get("columns", [])
-                valid_cols = [c for c in cols_to_scale if c in df.columns and pd.api.types.is_numeric_dtype(df[c])]
-                if valid_cols and method != "none":
-                    scaler = FeatureScaler()
-                    df = scaler.apply_strategy(df, valid_cols, method)
-                    display_cols = ", ".join(valid_cols[:3]) + ("..." if len(valid_cols) > 3 else "")
-                    log.append({"step": "Scaling", "column": display_cols,
-                                 "strategy": method, "detail": f"{len(valid_cols)} columns scaled"})
-
-            # Drop duplicate rows if requested
+            # --- Drop Duplicates ---
             if config.get("drop_duplicates", False):
                 before = len(df)
                 df = df.drop_duplicates()
-                log.append({"step": "Duplicates", "column": "all", "strategy": "drop",
-                            "detail": f"Removed {before - len(df)} duplicates"})
+                removed = before - len(df)
+                if removed > 0:
+                    log.append({"step": "Duplicates", "column": "all", "strategy": "drop",
+                                "detail": f"Removed {removed} duplicates"})
 
-            cleaned_profiler = DataProfiler(df)
+            # Save human-readable version for download (original text values preserved)
+            export_df = df.copy()
+
+            # ── STAGE 2: ML preprocessing (encoding + scaling) for feature selection ─
+            ml_df = df.copy()
+
+            # --- Categorical Encoding (applied to ml_df only) ---
+            encoding_cfg = config.get("encoding", {})
+            encoder = CategoricalEncoder()
+            for col, strategy in encoding_cfg.items():
+                # Skip if user chose 'none'
+                if strategy in ("none", "", None):
+                    continue
+                if col in ml_df.columns:
+                    target_col = config.get("target_column")
+                    ml_df = encoder.apply_strategy(ml_df, col, strategy, target_col=target_col)
+                    orig_unique = session['df'][col].nunique() if col in session['df'].columns else '?'
+                    log.append({"step": "Encoding", "column": col, "strategy": strategy,
+                                 "detail": f"{orig_unique} unique values encoded (ML only)"})
+
+            # --- Feature Scaling (applied to ml_df only) ---
+            scaling_cfg = config.get("scaling", {})
+            if scaling_cfg:
+                scale_method = scaling_cfg.get("method", "standard")
+                cols_to_scale = scaling_cfg.get("columns", [])
+                valid_cols = [
+                    c for c in cols_to_scale
+                    if c in ml_df.columns and pd.api.types.is_numeric_dtype(ml_df[c])
+                ]
+                if valid_cols and scale_method not in ("none", "", None):
+                    scaler = FeatureScaler()
+                    ml_df = scaler.apply_strategy(ml_df, valid_cols, scale_method)
+                    display_cols = ", ".join(valid_cols[:3]) + ("..." if len(valid_cols) > 3 else "")
+                    log.append({"step": "Scaling", "column": display_cols,
+                                 "strategy": scale_method,
+                                 "detail": f"{len(valid_cols)} columns scaled (ML only)"})
+
+            # ── Profile is based on export_df so column types stay readable ────────
+            cleaned_profiler = DataProfiler(export_df)
             cleaned_profile = cleaned_profiler.get_profile()
 
-            session["cleaned_df"] = df
+            session["export_df"] = export_df          # human-readable → download
+            session["ml_df"] = ml_df                  # encoded+scaled → feature selection
+            # Keep cleaned_df as an alias pointing to export_df for backwards compat
+            session["cleaned_df"] = export_df
             session["cleaned_profile"] = cleaned_profile
             session["cleaning_log"] = log
             session["encoding_map"] = encoder.get_encoding_map()
-            
-            logger.info(f"Dataset cleaned: {session_id} | Steps: {len(log)} | New shape: {df.shape}")
+
+            logger.info(
+                f"Dataset cleaned: {session_id} | Steps: {len(log)} "
+                f"| Export shape: {export_df.shape} | ML shape: {ml_df.shape}"
+            )
 
             return {
                 "session_id": session_id,
                 "cleaned_profile": cleaned_profile,
                 "cleaning_log": log,
-                "preview": df_to_safe_dict(df),
-                "columns": df.columns.tolist(),
+                "preview": df_to_safe_dict(export_df),
+                "columns": export_df.columns.tolist(),
             }
-        
+
         except Exception as e:
-            logger.error(f"Cleaning pipeline error in session {session_id}: {str(e)}")
+            logger.error(f"Cleaning pipeline error in session {session_id}: {str(e)}\n{traceback.format_exc()}")
             raise HTTPException(status_code=400, detail=f"Cleaning failed: {str(e)}")
 
     except HTTPException:
@@ -323,14 +359,21 @@ async def clean_dataset(body: dict):
 
 @app.post("/features")
 async def select_features(body: dict):
-    """Run feature selection on the cleaned dataset."""
+    """Run feature selection on the ML-processed (encoded+scaled) dataset."""
     try:
         session_id = body.get("session_id")
         if not session_id or session_id not in sessions:
             raise HTTPException(status_code=404, detail="Session not found or expired")
 
         session = sessions[session_id]
-        df = session.get("cleaned_df") if session.get("cleaned_df") is not None else session.get("df")
+        # Prefer ml_df (encoded+scaled) for feature selection; fall back to export_df or raw df
+        df = session.get("ml_df")
+        if df is None:
+            df = session.get("export_df")
+        if df is None:
+            df = session.get("cleaned_df")
+        if df is None:
+            df = session.get("df")
         
         if df is None:
             raise HTTPException(status_code=400, detail="No dataset available in session")
@@ -438,7 +481,7 @@ async def get_report(session_id: str):
 
 @app.get("/download/{session_id}")
 async def download_cleaned(session_id: str, format: str = "csv"):
-    """Download the cleaned dataset as CSV or XLSX."""
+    """Download the cleaned (human-readable) dataset as CSV or XLSX."""
     try:
         if session_id not in sessions:
             raise HTTPException(status_code=404, detail="Session not found or expired")
@@ -447,7 +490,13 @@ async def download_cleaned(session_id: str, format: str = "csv"):
             raise HTTPException(status_code=400, detail="Format must be 'csv' or 'xlsx'")
         
         session = sessions[session_id]
-        df = session.get("cleaned_df") if session.get("cleaned_df") is not None else session.get("df")
+        # Always export the human-readable version (original categorical text preserved,
+        # no encoding or scaling applied).  Fall back to raw df if cleaning hasn't run yet.
+        df = session.get("export_df")
+        if df is None:
+            df = session.get("cleaned_df")
+        if df is None:
+            df = session.get("df")
         
         if df is None:
             raise HTTPException(status_code=400, detail="No dataset available in session")

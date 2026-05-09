@@ -152,7 +152,7 @@ function tplExport() {
       <div class="aesthetic-card">
         <div class="aesthetic-card-header">
           <div class="aesthetic-card-title">CLEANED DATASET</div>
-          <div class="aesthetic-card-subtitle">READY FOR MODEL TRAINING</div>
+          <div class="aesthetic-card-subtitle">ORIGINAL TEXT VALUES PRESERVED — NO ENCODING OR SCALING</div>
         </div>
         <div style="display:flex; flex-direction:column; gap:16px;">
           <a href="${csvUrl}" class="btn" style="justify-content:center;">DOWNLOAD AS CSV</a>

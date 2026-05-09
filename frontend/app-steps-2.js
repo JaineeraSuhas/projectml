@@ -15,9 +15,8 @@ function autoConfig() {
     if (info.inferred_type === 'numeric' && info.outlier_count > 0) {
       S.outlierConfig[col] = { method: 'iqr', action: 'cap' };
     }
-    if (info.inferred_type === 'categorical') {
-      S.encodingConfig[col] = info.unique <= 5 ? 'onehot' : 'label';
-    }
+    // Default: keep original text — encoding is opt-in (ML-only, does not affect export)
+    // S.encodingConfig[col] intentionally left empty so 'none' is selected by default
     if (info.inferred_type === 'numeric' && !col.toLowerCase().includes('id')) {
       S.scalingConfig.columns.push(col);
     }
@@ -83,10 +82,10 @@ function tplClean() {
       <td>${i.unique} unique</td>
       <td>
         <select onchange="updateEncoding('${col}', this.value)">
-          <option value="none">Ignore</option>
-          <option value="label" ${S.encodingConfig[col] === 'label' ? 'selected' : ''}>Label Encoding</option>
-          <option value="onehot" ${S.encodingConfig[col] === 'onehot' ? 'selected' : ''}>One-Hot</option>
-          <option value="binary" ${S.encodingConfig[col] === 'binary' ? 'selected' : ''}>Binary Encoding</option>
+          <option value="none" ${!S.encodingConfig[col] || S.encodingConfig[col] === 'none' ? 'selected' : ''}>Keep Original (No Encoding)</option>
+          <option value="label" ${S.encodingConfig[col] === 'label' ? 'selected' : ''}>Label Encoding (ML only)</option>
+          <option value="onehot" ${S.encodingConfig[col] === 'onehot' ? 'selected' : ''}>One-Hot (ML only)</option>
+          <option value="binary" ${S.encodingConfig[col] === 'binary' ? 'selected' : ''}>Binary Encoding (ML only)</option>
         </select>
       </td>
     </tr>
@@ -130,7 +129,7 @@ function tplClean() {
     <div class="aesthetic-card mb-32">
       <div class="aesthetic-card-header">
         <div class="aesthetic-card-title">CATEGORICAL ENCODING</div>
-        <div class="aesthetic-card-subtitle">TRANSFORM TEXT TO NUMBERS</div>
+        <div class="aesthetic-card-subtitle">FOR ML ONLY — EXPORTED FILE KEEPS ORIGINAL TEXT VALUES</div>
       </div>
       ${catCols.length ? `
         <div class="table-wrap">
@@ -142,7 +141,7 @@ function tplClean() {
     <div class="aesthetic-card">
       <div class="aesthetic-card-header">
         <div class="aesthetic-card-title">FEATURE SCALING</div>
-        <div class="aesthetic-card-subtitle">NORMALIZE NUMERIC RANGES</div>
+        <div class="aesthetic-card-subtitle">FOR ML ONLY — EXPORTED FILE KEEPS ORIGINAL NUMERIC VALUES</div>
       </div>
       <div style="padding: 16px 0;">
         <select onchange="S.scalingConfig.method = this.value" style="max-width:300px">
