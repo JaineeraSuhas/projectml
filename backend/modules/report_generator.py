@@ -20,6 +20,8 @@ def generate_html_report(
     after_cols = cleaned_profile["shape"]["cols"]
     before_score = original_profile.get("quality_score", 0)
     after_score = cleaned_profile.get("quality_score", 0)
+    missing_before = original_profile.get("missing_cells", 0)
+    missing_after = cleaned_profile.get("missing_cells", 0)
 
     fi_json = json.dumps(feature_importance or {})
     sf_json = json.dumps(selected_features or [])
@@ -255,11 +257,61 @@ def generate_html_report(
     </div>
   </div>
 
+  <div class="aesthetic-card">
+    <div class="aesthetic-card-header">
+      <div class="aesthetic-card-title font-disp">PERFORMANCE RATE & DIFFERENCE</div>
+      <div class="label-small" style="margin-top: 8px;">DATA QUALITY METRICS COMPARISON</div>
+    </div>
+    <div id="perf-chart"></div>
+  </div>
+
   {'<div class="aesthetic-card"><div class="aesthetic-card-header"><div class="aesthetic-card-title font-disp">FEATURE IMPORTANCE</div><div class="label-small" style="margin-top: 8px;">PREDICTIVE POWER ANALYSIS</div></div><div id="fi-chart"></div></div>' if feature_importance else ''}
   
   {'<div class="aesthetic-card"><div class="aesthetic-card-header"><div class="aesthetic-card-title font-disp">SELECTED FEATURES</div><div class="label-small" style="margin-top: 8px;">SUBSET FOR MODELING</div></div><p style="font-family: var(--font-sans); font-size: 14px; font-weight: 500;">' + ', '.join(selected_features) + '</p></div>' if selected_features else ''}
 
 <script>
+const perfData = [
+  { label: 'Quality Score', before: {before_score}, after: {after_score} },
+  { label: 'Missing Cells', before: {missing_before}, after: {missing_after} },
+  { label: 'Rows Retained', before: {before_rows}, after: {after_rows} }
+];
+
+const perfContainer = document.getElementById('perf-chart');
+if (perfContainer) {{
+  perfContainer.innerHTML = perfData.map(d => {{
+    const maxVal = Math.max(d.before, d.after, 1);
+    const beforePct = Math.max(1, (d.before / maxVal) * 100);
+    const afterPct = Math.max(1, (d.after / maxVal) * 100);
+    const diff = d.after - d.before;
+    const diffSign = diff > 0 ? '+' : '';
+    let diffColor = 'var(--fg-muted)';
+    if (d.label === 'Missing Cells') {{
+      diffColor = diff < 0 ? '#4caf50' : (diff > 0 ? '#f44336' : 'var(--fg-muted)');
+    }} else {{
+      diffColor = diff > 0 ? '#4caf50' : (diff < 0 ? '#f44336' : 'var(--fg-muted)');
+    }}
+    
+    return `
+    <div style="margin-bottom: 24px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+        <div class="fi-label" style="font-size:14px;">${{d.label}}</div>
+        <div style="font-size:12px; font-weight:600; color:${{diffColor}}; font-family: var(--font-sans);">${{diffSign}}${{d.label === 'Quality Score' ? diff.toFixed(1) : diff.toFixed(0)}} difference</div>
+      </div>
+      <div class="fi-bar" style="margin-bottom: 4px;">
+        <span style="width: 60px; font-size:12px; color:var(--fg-muted);">Before</span>
+        <div class="fi-track"><div class="fi-fill" style="width:${{beforePct}}%; background:var(--fg-muted);"></div></div>
+        <span class="fi-val">${{d.label === 'Quality Score' ? d.before.toFixed(1) : Math.round(d.before).toLocaleString()}}</span>
+      </div>
+      <div class="fi-bar">
+        <span style="width: 60px; font-size:12px;">After</span>
+        <div class="fi-track"><div class="fi-fill" style="width:${{afterPct}}%;"></div></div>
+        <span class="fi-val">${{d.label === 'Quality Score' ? d.after.toFixed(1) : Math.round(d.after).toLocaleString()}}</span>
+      </div>
+    </div>
+    `;
+  }}).join('');
+}}
+
 const fi = {fi_json};
 const container = document.getElementById('fi-chart');
 if (container && Object.keys(fi).length > 0) {{

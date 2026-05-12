@@ -155,6 +155,10 @@ function tplClean() {
         </div>
       </div>
     </div>
+
+    <div style="display:flex; justify-content:flex-end; margin-top:32px; margin-bottom:16px;">
+      <button class="btn" onclick="executeCleaning()">APPLY CLEANING</button>
+    </div>
   `;
 }
 
